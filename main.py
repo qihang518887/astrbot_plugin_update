@@ -20,6 +20,7 @@ class AdvancedPluginManager(star.Star):
         super().__init__(context)
         self.context = context
         self.star_manager = context._star_manager
+        self.auto_update_enabled = True
         self.interval_seconds = 86400
         self._update_task = asyncio.create_task(self._scheduled_update_loop())
 
@@ -47,6 +48,28 @@ class AdvancedPluginManager(star.Star):
             if VersionComparator.compare_version(local_ver, remote_ver) < 0:
                 outdated.append((plugin, remote_ver))
         return outdated
+
+    @filter.llm_tool(name="configure_auto_update")
+    async def configure_auto_update(
+        self, event: AstrMessageEvent, enabled: bool, interval_hours: float
+    ) -> str:
+        """设置定时自动更新插件的开关和检查周期。
+
+        Args:
+            enabled(boolean): 是否开启定时自动升级
+            interval_hours(number): 检查升级的间隔时间（单位：小时）
+        """
+        self.auto_update_enabled = enabled
+        self.interval_seconds = int(interval_hours * 3600)
+        status = "已开启" if self.auto_update_enabled else "已关闭"
+        return f"定时自动更新{status}，检查周期已设为 {interval_hours} 小时。"
+
+    @filter.llm_tool(name="get_auto_update_status")
+    async def get_auto_update_status(self, event: AstrMessageEvent) -> str:
+        """获取当前插件定时自动升级的开关状态与周期时长。"""
+        status = "开启" if self.auto_update_enabled else "关闭"
+        hours = self.interval_seconds / 3600
+        return f"定时自动更新当前状态: {status}，检查周期: {hours:.1f} 小时。"
 
     @filter.llm_tool(name="test_fastest_proxy")
     async def test_fastest_proxy(self, event: AstrMessageEvent) -> str:
@@ -118,7 +141,8 @@ class AdvancedPluginManager(star.Star):
     async def _scheduled_update_loop(self) -> None:
         while True:
             await asyncio.sleep(self.interval_seconds)
-            await self.update_all_plugins()
+            if self.auto_update_enabled:
+                await self.update_all_plugins()
 
     async def terminate(self) -> None:
         self._update_task.cancel()
