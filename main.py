@@ -1,7 +1,7 @@
 import asyncio
-from packaging.version import parse as parse_version
 from astrbot.api import star
 from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.core.utils.version_comparator import VersionComparator
 
 
 @star.register("advanced_plugin_manager", "user", "智能插件管理系统", "1.0.0")
@@ -18,12 +18,12 @@ class AdvancedPluginManager(star.Star):
         for plugin in self.context.get_all_stars():
             if plugin.reserved or not plugin.repo:
                 continue
-            # 不通过市场索引，直接轮询插件仓库地址的元数据版本号
-            remote_info = await self.star_manager._updater.inspect_repository(plugin.repo)
+            # 调用原生 inspect_plugin_repository 直接查询插件源地址的 metadata
+            remote_info = await self.star_manager.inspect_plugin_repository(plugin.repo)
             remote_ver = str(remote_info["version"]).strip()
             local_ver = str(plugin.version).strip()
-            # 只要插件地址的元数据版本号增加，即判定为有更新
-            if parse_version(remote_ver) > parse_version(local_ver):
+            # 调用原生 VersionComparator 比较语义版本：云端版本严格大于本地版本即判定为更新
+            if VersionComparator.compare_version(local_ver, remote_ver) < 0:
                 outdated.append((plugin, remote_ver))
         return outdated
 
@@ -53,7 +53,7 @@ class AdvancedPluginManager(star.Star):
 
     @filter.llm_tool(name="reinstall_plugin")
     async def reinstall_plugin(self, event: AstrMessageEvent, plugin_name: str) -> str:
-        """重新安装指定的插件（无需卸载，直接重新拉取覆盖安装）。
+        """重新安装指定的插件（无需卸载，调用原生 install_plugin 直接覆盖安装）。
 
         Args:
             plugin_name(string): 要重新安装的插件名称
@@ -64,7 +64,7 @@ class AdvancedPluginManager(star.Star):
 
     @filter.llm_tool(name="check_plugin_updates")
     async def check_plugin_updates(self, event: AstrMessageEvent) -> str:
-        """不通过市场索引，直接轮询各插件地址的 metadata 版本号检查更新。"""
+        """不通过市场索引，调用原生接口直接轮询各插件地址的 metadata 版本号检查更新。"""
         outdated = await self._get_outdated_plugins()
         if not outdated:
             return "所有插件均已是最新版本，无需更新。"
