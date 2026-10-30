@@ -1,0 +1,5 @@
+name: advanced_plugin_manager
+desc: 智能插件管理系统，支持自然语言工具操作、基于语义版本的友好升级判定与定时自动升级所有插件。
+author: qihang518887
+version: 1.0.0
+repo: https://github.com/qihang518887/astrbot_plugin_update
