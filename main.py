@@ -3,6 +3,7 @@ import asyncio
 import aiohttp
 from astrbot.api import star
 from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.core.star import StarMetadata
 from astrbot.core.utils.version_comparator import VersionComparator
 
 OFFICIAL_PROXIES = [
@@ -14,7 +15,6 @@ OFFICIAL_PROXIES = [
 TEST_TARGET = "https://github.com/AstrBotDevs/AstrBot/raw/refs/heads/master/.python-version"
 
 
-@star.register("advanced_plugin_manager", "user", "智能插件管理系统", "1.0.0")
 class AdvancedPluginManager(star.Star):
     def __init__(self, context: star.Context) -> None:
         super().__init__(context)
@@ -37,7 +37,7 @@ class AdvancedPluginManager(star.Star):
             valid = [r for r in results if isinstance(r, tuple)]
             return min(valid, key=lambda x: x[1])[0]
 
-    async def _get_outdated_plugins(self, proxy: str) -> list[tuple[star.StarMetadata, str]]:
+    async def _get_outdated_plugins(self, proxy: str) -> list[tuple[StarMetadata, str]]:
         outdated = []
         for plugin in self.context.get_all_stars():
             if plugin.reserved or not plugin.repo:
